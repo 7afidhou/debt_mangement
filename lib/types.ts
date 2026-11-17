@@ -1,7 +1,19 @@
 export type TransactionType = 'ADD' | 'SUBTRACT' | 'CLEAR' | 'INITIAL';
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  password_hash?: string | null;
+  avatar_url?: string | null;
+  provider: 'credentials' | 'google';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Customer {
   id: number;
+  user_id?: number | null;
   name: string;
   phone: string | null;
   notes: string | null;

@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import {
   getCustomers,
   getCustomerById,
@@ -13,12 +15,26 @@ import {
 } from '@/lib/db';
 import { Customer, DebtTransaction, DashboardSummary } from '@/lib/types';
 
+async function getCurrentUserId(): Promise<number | undefined> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (session?.user && (session.user as any).id) {
+      return parseInt((session.user as any).id, 10);
+    }
+  } catch (err) {
+    // If running outside session context
+  }
+  return undefined;
+}
+
 export async function getCustomersAction(search?: string, filter?: 'all' | 'debt' | 'settled'): Promise<Customer[]> {
-  return getCustomers(search, filter);
+  const userId = await getCurrentUserId();
+  return getCustomers(userId, search, filter);
 }
 
 export async function getDashboardSummaryAction(): Promise<DashboardSummary> {
-  return getDashboardSummary();
+  const userId = await getCurrentUserId();
+  return getDashboardSummary(userId);
 }
 
 export async function getCustomerTransactionsAction(customerId: number): Promise<DebtTransaction[]> {
@@ -35,7 +51,8 @@ export async function addCustomerAction(data: {
     if (!data.name || !data.name.trim()) {
       return { success: false, error: 'Customer name is required' };
     }
-    const customer = addCustomer(data.name, data.initialDebt || 0, data.phone, data.notes);
+    const userId = await getCurrentUserId();
+    const customer = addCustomer(data.name, data.initialDebt || 0, data.phone, data.notes, userId);
     revalidatePath('/');
     return { success: true, customer };
   } catch (err: any) {
